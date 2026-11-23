@@ -90,6 +90,18 @@ window.__ModuleLoader__.load({
       '.vwb-back{border:none;background:transparent;color:var(--dsw-alias-brand-primary);font-size:12px;',
       'cursor:pointer;padding:0;font-family:inherit}',
       '.vwb-note{font-size:11px;color:var(--dsw-alias-label-secondary);line-height:1.6}',
+      '.vwb-points{display:flex;flex-direction:column;gap:6px}',
+      '.vwb-point{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.55}',
+      '.vwb-kind{flex:none;margin-top:1px;font-size:10.5px;padding:1px 6px;border-radius:999px;',
+      'background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary)}',
+      '.vwb-point-text{flex:1;min-width:0;word-break:break-word}',
+      '.vwb-files{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--dsw-alias-label-secondary)}',
+      '.vwb-file{display:flex;gap:10px;justify-content:space-between}',
+      '.vwb-file-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.vwb-file-stat{flex:none;font-variant-numeric:tabular-nums}',
+      '.vwb-confirm{border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px;',
+      'background:var(--dsw-alias-bg-layer-2);display:flex;flex-direction:column;gap:8px}',
+      '.vwb-confirm-text{font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary)}',
       '@media (prefers-reduced-motion: reduce){.vwb-float,.vwb-tail,.vwb-eye,.vwb-hop,.vwb-bub,.vwb-badge{animation:none !important}}',
     ].join('\n')
 
@@ -279,6 +291,9 @@ window.__ModuleLoader__.load({
       const [override, setOverride] = React.useState('')
       const [picking, setPicking] = React.useState(false)
       const [spaces, setSpaces] = React.useState([])
+      const [noteData, setNoteData] = React.useState(null)
+      const [noteLoading, setNoteLoading] = React.useState(false)
+      const [confirmRestore, setConfirmRestore] = React.useState(false)
       const rootRef = React.useRef(null)
       const dragRef = React.useRef(null)
       const posRef = React.useRef(pos)
@@ -332,8 +347,35 @@ window.__ModuleLoader__.load({
       }, [projectDir, refresh])
 
       React.useEffect(() => {
+        if (selected === null) {
+          setNoteData(null)
+          setNoteLoading(false)
+          setConfirmRestore(false)
+          return undefined
+        }
+        let alive = true
+        setNoteData(null)
+        setNoteLoading(true)
+        setConfirmRestore(false)
+        request('note', { sha: selected.sha })
+          .then(function (result) {
+            if (!alive) return
+            setNoteData(result)
+            setNoteLoading(false)
+          })
+          .catch(function (caught) {
+            if (!alive) return
+            setNoteLoading(false)
+            setError(caught instanceof Error ? caught.message : String(caught))
+          })
+        return function () {
+          alive = false
+        }
+      }, [selected, request])
+
+      React.useEffect(() => {
         if (!open) return undefined
-        const timer = window.setInterval(refresh, 4000)
+        const timer = window.setInterval(refresh, 8000)
         return function () {
           window.clearInterval(timer)
         }
@@ -607,34 +649,101 @@ window.__ModuleLoader__.load({
                     },
                     '← 返回版本树',
                   ),
-                  h('div', { className: 'vwb-detail-subject' }, selected.subject),
+                  h('div', { className: 'vwb-detail-subject' }, noteData !== null && noteData.summary ? noteData.summary : selected.subject),
                   h(
                     'div',
                     { className: 'vwb-meta' },
                     'v' + selected.n + ' · ' + fullTime(selected.at) + ' · ' + selected.short,
                   ),
-                  h(
-                    'div',
-                    { className: 'vwb-note' },
-                    '回到这一版不会删除历史：旧内容会复制成一条新存档，随时还能再回来。',
-                  ),
-                  h(
-                    'div',
-                    { style: { display: 'flex', gap: '8px' } },
-                    h(
-                      'button',
-                      {
-                        type: 'button',
-                        className: 'vwb-btn vwb-btn--primary',
-                        disabled: busy,
-                        onClick: async function () {
-                          const result = await act('restore', { sha: selected.sha })
-                          if (result !== null) setSelected(null)
-                        },
-                      },
-                      busy ? '处理中' : '回到这一版',
-                    ),
-                  ),
+                  noteLoading
+                    ? h('div', { className: 'vwb-note' }, '正在读这次改动，写版本说明…')
+                    : noteData !== null && Array.isArray(noteData.points) && noteData.points.length > 0
+                      ? h(
+                          'div',
+                          { className: 'vwb-points' },
+                          noteData.points.map(function (point, index) {
+                            return h(
+                              'div',
+                              { className: 'vwb-point', key: 'point-' + index },
+                              h('span', { className: 'vwb-kind' }, point.kind),
+                              h('span', { className: 'vwb-point-text' }, point.text),
+                            )
+                          }),
+                        )
+                      : null,
+                  noteData !== null && Array.isArray(noteData.files) && noteData.files.length > 0
+                    ? h(
+                        'div',
+                        { className: 'vwb-files' },
+                        noteData.files.slice(0, 8).map(function (file) {
+                          return h(
+                            'div',
+                            { className: 'vwb-file', key: file.path },
+                            h('span', { className: 'vwb-file-name', title: file.path }, file.path),
+                            h('span', { className: 'vwb-file-stat' }, '+' + file.added + ' -' + file.removed),
+                          )
+                        }),
+                        noteData.files.length > 8
+                          ? h('div', null, '还有 ' + (noteData.files.length - 8) + ' 个文件')
+                          : null,
+                      )
+                    : null,
+                  confirmRestore
+                    ? h(
+                        'div',
+                        { className: 'vwb-confirm' },
+                        h(
+                          'div',
+                          { className: 'vwb-confirm-text' },
+                          '回到 v' +
+                            selected.n +
+                            '？当前内容会先存成一个新版本，历史不会被删除，之后还能再回来。',
+                        ),
+                        h(
+                          'div',
+                          { style: { display: 'flex', gap: '8px' } },
+                          h(
+                            'button',
+                            {
+                              type: 'button',
+                              className: 'vwb-btn vwb-btn--primary',
+                              disabled: busy,
+                              onClick: async function () {
+                                const result = await act('restore', { sha: selected.sha })
+                                if (result !== null) setSelected(null)
+                              },
+                            },
+                            busy ? '处理中' : '确认回到这一版',
+                          ),
+                          h(
+                            'button',
+                            {
+                              type: 'button',
+                              className: 'vwb-btn',
+                              onClick: function () {
+                                setConfirmRestore(false)
+                              },
+                            },
+                            '取消',
+                          ),
+                        ),
+                      )
+                    : h(
+                        'div',
+                        { style: { display: 'flex', gap: '8px' } },
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            className: 'vwb-btn',
+                            disabled: busy,
+                            onClick: function () {
+                              setConfirmRestore(true)
+                            },
+                          },
+                          '回到这一版',
+                        ),
+                      ),
                 )
               : h(
                   'div',
@@ -699,7 +808,14 @@ window.__ModuleLoader__.load({
                                 className: 'vwb-dot' + (item === versions[0] ? '' : ' vwb-dot--old'),
                               }),
                               h('span', { className: 'vwb-clock' }, clockOf(item.at)),
-                              h('span', { className: 'vwb-subject', title: item.subject }, item.subject),
+                              h(
+                                'span',
+                                {
+                                  className: 'vwb-subject',
+                                  title: item.note && item.note.summary ? item.note.summary : item.subject,
+                                },
+                                item.note && item.note.summary ? item.note.summary : item.subject,
+                              ),
                               h('span', { className: 'vwb-num' }, 'v' + item.n),
                             )
                           }),

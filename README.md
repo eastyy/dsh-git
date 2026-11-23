@@ -12,15 +12,16 @@
 两个包都声明了 `dsh.bundle`，用 dsh 的插件管理器安装，装完重启一次 dsh：
 
 - 界面：**设置 → 插件 → 安装本地 bundle**，选中 `packages/<插件名>` 目录。
-- 命令行：`dsh plugin add github:<owner>/dsh-git/packages/<插件名>`
+- 命令行：`dsh plugin add github:eastyy/dsh-git/packages/<插件名>`
 
-`<owner>` 是仓库所属的 GitHub 账号。安装后 Host 半侧不会热加载，必须重启。
+安装后 Host 半侧不会热加载，必须重启。
 
 ## 目录
 
 ```
 packages/html-editor/     可视化 HTML 编辑器
 packages/version-bubble/  版本鲸鱼
+market/                   提交到 awesome-dsh-plugin 收录列表用的两个条目
 LICENSE                   MIT
 ```
 

@@ -24,7 +24,7 @@
 需要 dsh 桌面版或 Web 版，Node.js ≥ 20。
 
 1. **设置 → 插件 → 安装本地 bundle**，选中本目录（含 `package.json` 的那一层）。
-2. 或命令行：`dsh plugin add github:<owner>/dsh-git/packages/html-editor`。
+2. 或命令行：`dsh plugin add github:eastyy/dsh-git/packages/html-editor`。
 3. 重启 dsh 一次。Host 半侧不会热加载。
 
 安装后确认：插件列表里出现「HTML 可视化编辑」，左下角出现 **HTML 编辑** 按钮。

@@ -23,7 +23,7 @@
 需要 dsh 管理下的插件（桌面版或 Web 版），Node.js ≥ 20，且 `git` 在 `PATH` 里。
 
 1. **设置 → 插件 → 安装本地 bundle**，选中本目录（含 `package.json` 的那一层）。
-2. 或命令行：`dsh plugin add github:<owner>/dsh-git/packages/version-bubble`。
+2. 或命令行：`dsh plugin add github:eastyy/dsh-git/packages/version-bubble`。
 3. 重启 dsh 一次。Host 半侧不会热加载。
 
 ## 使用

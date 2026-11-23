@@ -48,5 +48,14 @@
     "design",
     "wysiwyg"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eastyy/dsh-git.git",
+    "directory": "packages/html-editor"
+  },
+  "homepage": "https://github.com/eastyy/dsh-git/tree/main/packages/html-editor",
+  "bugs": {
+    "url": "https://github.com/eastyy/dsh-git/issues"
+  },
   "license": "MIT"
 }

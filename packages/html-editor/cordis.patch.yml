@@ -1,0 +1,7 @@
+# dsh-html-editor bundle patch — inserts the Host row into the profile's layer stack.
+#
+# The id is this bundle's loader entry id. Removing this list item (or the whole
+# profile dependency) uninstalls the editor together with its Client half.
+- insert:
+    - id: dsh-html-editor
+      name: dsh-html-editor

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>HTML editor · client harness</title>
+<style>
+  :root {
+    --dsw-alias-bg-layer-1: #f7f8fa;
+    --dsw-alias-bg-layer-2: #f1f3f6;
+    --dsw-alias-bg-overlay: #ffffff;
+    --dsw-alias-border-l1: rgba(15, 23, 42, .09);
+    --dsw-alias-border-l2: rgba(15, 23, 42, .16);
+    --dsw-alias-label-primary: #0f172a;
+    --dsw-alias-label-secondary: #64748b;
+    --dsw-alias-brand-primary: #4d6bfe;
+    --dsw-alias-state-error-primary: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: #f7f8fa; color: #0f172a; font: 13px/1.5 "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  #app { min-height: 100%; }
+  .fake-shell { display: flex; min-height: 100vh; }
+  .fake-side { width: 280px; border-right: 1px solid rgba(15,23,42,.09); padding: 18px; color: #94a3b8; font-size: 12px; }
+  .fake-main { flex: 1; padding: 28px 40px; color: #334155; }
+  .fake-main h1 { font-size: 20px; margin: 0 0 10px; }
+  .fake-main p { max-width: 560px; color: #64748b; }
+</style>
+</head>
+<body>
+<div id="preview-action" style="position:fixed;top:18px;right:24px;z-index:5"></div>
+<div id="app"></div>
+<script>
+  window.__errors = []
+  window.addEventListener('error', function (event) { window.__errors.push(String(event.message || event.error)) })
+  window.__dheSessions = { byId: { s1: { cwd: '__ROOT__', retainedBy: { mainView: 1 }, title: '设计工作区' } } }
+</script>
+<script src="/mock/react.js"></script>
+<script src="/mock/react-dom.js"></script>
+<script>
+  window.__ModuleLoader__ = {
+    load: function (definition) {
+      window.__dheEntry = definition.factory(function (name) {
+        if (name === 'react') return window.React
+        throw new Error('unknown module ' + name)
+      })
+    }
+  }
+</script>
+<script src="/client.js"></script>
+<script>
+  const entry = window.__dheEntry
+  const registrations = {}
+  const ctx = {
+    slots: {
+      inject: function (name, callback) { callback() },
+      register: function (options, Component) {
+        registrations[options.name] = Component
+        return function () {}
+      }
+    }
+  }
+  entry.apply(ctx)
+  const Overlay = registrations['shell.overlay']
+  if (!Overlay) throw new Error('shell.overlay was not registered')
+  window.__dheRegistrations = registrations
+  const root = ReactDOM.createRoot(document.getElementById('app'))
+  root.render(
+    React.createElement(
+      'div',
+      { className: 'fake-shell' },
+      React.createElement('div', { className: 'fake-side' }, '会话 · 设计工作区'),
+      React.createElement(
+        'div',
+        { className: 'fake-main' },
+        React.createElement('h1', null, '把监控终端的设计稿直接改出来'),
+        React.createElement('p', null, '这是一个模拟的 DSH 页面，用来验证插件客户端在真实 React 环境里的渲染与交互。'),
+      ),
+      React.createElement(Overlay, {
+        useSessions: function (selector) { return selector(window.__dheSessions) }
+      }),
+    ),
+  )
+  const Action = registrations['sidebar.right.tab.document.actions']
+  if (Action) {
+    ReactDOM.createRoot(document.getElementById('preview-action')).render(
+      React.createElement(Action, {
+        absolutePath: window.__dheSessions.byId.s1.cwd + '\\fixture.html'
+      })
+    )
+  }
+</script>
+</body>
+</html>

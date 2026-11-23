@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>过程监控 · 设计稿</title>
+  <link rel="stylesheet" href="fixture.css">
+</head>
+<body>
+  <p class="eyebrow">Terminal Supervision</p>
+  <h1 id="title">过程监控 · 设计稿</h1>
+  <p class="lede">把终端上正在发生的事，变成值班员三秒内能看懂的信号。这张页面用来验证可视化编辑器的选中、改字、改色和保存。</p>
+
+  <div class="grid">
+    <section class="card" id="card-a">
+      <h2>实时态势</h2>
+      <p>在线终端 1,284 台，风险会话 7 个，均集中在财务与研发网段。</p>
+    </section>
+    <section class="card" id="card-b">
+      <h2>策略命中</h2>
+      <p>过去 24 小时命中 312 次，其中高风险策略 18 次，已自动阻断 12 次。</p>
+    </section>
+  </div>
+
+  <div class="actions">
+    <button class="primary" type="button">进入监控</button>
+    <button class="ghost" type="button">查看全部策略</button>
+  </div>
+
+  <script>
+    document.body.dataset.scriptRan = 'yes'
+    document.title = 'SCRIPT RAN'
+  </script>
+</body>
+</html>

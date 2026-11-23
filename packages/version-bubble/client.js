@@ -6,7 +6,7 @@
  * `/__dsh-version-bubble/`.
  */
 window.__ModuleLoader__.load({
-  id: '@local/dsh-version-bubble',
+  id: 'dsh-version-bubble',
   factory(require) {
     const React = require('react')
     const h = React.createElement
@@ -573,6 +573,7 @@ window.__ModuleLoader__.load({
                   onClick: async function () {
                     const outcome = await act('snapshot', { note: '' })
                     if (outcome === null) return
+                    if (outcome.result !== undefined && outcome.result.empty === true) return
                     const next = outcome.state
                     if (next !== null && Array.isArray(next.versions) && next.versions.length > 0) {
                       setPicking(false)

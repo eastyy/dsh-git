@@ -3,3 +3,11 @@ node_modules/
 Thumbs.db
 *.log
 .cache/
+
+# 本地测试产物：截图、临时工作区、浏览器 profile（含登录态，绝不能提交）
+**/test/.run/
+**/test/e2e/edge-profile/
+**/test/e2e/*.png
+
+# 编辑器保存时的原子写临时文件
+**/*.dhe-*.tmp

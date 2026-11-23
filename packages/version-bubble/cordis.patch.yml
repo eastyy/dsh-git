@@ -1,0 +1,4 @@
+# dsh-version-bubble bundle patch — inserts the Host row into the profile's layer stack.
+- insert:
+    - id: dsh-version-bubble
+      name: dsh-version-bubble

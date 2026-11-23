@@ -1,0 +1,52 @@
+{
+  "name": "dsh-html-editor",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Visual HTML editor for the DeepSeek Harness Web UI: click text to edit, recolor and delete components in any workspace HTML file, then save it in place.",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "assets/editor.js",
+    "assets/icon-180.png",
+    "assets/screenshots/*.png",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "screenshots.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "verify": "node test/verify.mjs",
+    "test:runtime": "node test/cdp.mjs",
+    "test:ui": "node test/ui.mjs"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "html-editor",
+    "design",
+    "wysiwyg"
+  ],
+  "license": "MIT"
+}

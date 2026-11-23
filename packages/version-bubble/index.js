@@ -9,7 +9,7 @@
  */
 import { existsSync, statSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
-import { isAbsolute, join } from 'node:path'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 
 const PREFIX = '/__dsh-version-bubble'
 const FIELD = '\u001f'
@@ -117,23 +117,30 @@ export function apply(ctx, config) {
     }
   }
 
-  function normalizeDir(value) {
-    return value.replace(/[\\/]+$/, '').replace(/\//g, '\\').toLowerCase()
-  }
-
-  /** Resolve the target directory: a known workspace, any existing absolute directory, else the default. */
+  /** Resolve the target directory: a known workspace (or something inside one), else the default. */
   function resolveDir(requested) {
     const base = baseDirectory()
     if (typeof requested !== 'string' || requested === '') return base
-    const wanted = normalizeDir(requested)
-    for (const item of workspaces()) {
-      if (normalizeDir(item.path) === wanted) return item.path
-    }
+    const roots = workspaces().map(function (item) {
+      return item.path
+    })
+    if (base !== '') roots.push(base)
+    let target
     try {
-      if (isAbsolute(requested) && existsSync(requested) && statSync(requested).isDirectory()) return requested
+      if (!isAbsolute(requested) || !existsSync(requested) || !statSync(requested).isDirectory()) return base
+      target = resolve(requested)
     } catch {
-      /* unreadable path: fall back */
+      return base
     }
+    for (const root of roots) {
+      try {
+        const rel = relative(resolve(root), target)
+        if (rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))) return requested
+      } catch {
+        /* unreadable root: try the next one */
+      }
+    }
+    /* An unregistered directory is not ours to commit in: fall back, never accept. */
     return base
   }
 
@@ -676,6 +683,27 @@ export function apply(ctx, config) {
     }
   }
 
+  /**
+   * A state-changing request has to come from the page that hosts us.
+   * A cross-site "simple" request needs no preflight, so without this a page
+   * at any origin could POST a snapshot or a restore and never need to read
+   * the response.
+   */
+  function trusted(req) {
+    const site = typeof req.headers['sec-fetch-site'] === 'string' ? req.headers['sec-fetch-site'].toLowerCase() : ''
+    if (site === 'cross-site') return false
+    const origin = typeof req.headers.origin === 'string' ? req.headers.origin : ''
+    if (origin === '') return true
+    const host = typeof req.headers.host === 'string' ? req.headers.host : ''
+    if (host === '') return false
+    return origin === `http://${host}` || origin === `https://${host}`
+  }
+
+  function isJson(req) {
+    const type = typeof req.headers['content-type'] === 'string' ? req.headers['content-type'].toLowerCase() : ''
+    return type.startsWith('application/json')
+  }
+
   async function handle(req, res) {
     const url = new URL(req.url === undefined ? PREFIX : req.url, 'http://127.0.0.1')
     if (!url.pathname.startsWith(PREFIX)) {
@@ -685,6 +713,10 @@ export function apply(ctx, config) {
     const action = url.pathname.slice(PREFIX.length).replace(/^\/+/, '').replace(/\/+$/, '')
     const dir = resolveDir(url.searchParams.get('dir'))
     try {
+      if (!trusted(req) || (req.method !== 'GET' && req.method !== 'HEAD' && !isJson(req))) {
+        sendJson(res, 403, { ok: false, error: '请求来源不受信任' })
+        return
+      }
       if (action === 'workspaces') {
         sendJson(res, 200, { ok: true, items: workspaces() })
         return

@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "HTML 可视化编辑",
+    "description": "在全屏画布中直接编辑工作区 HTML 的文字、颜色与组件，并写回原文件。"
+  },
+  "launcher": "HTML 编辑",
+  "panel": {
+    "title": "HTML 可视化编辑",
+    "files": "工作区 HTML",
+    "empty": "这个工作区里还没有 HTML 文件。",
+    "emptyHint": "先生成一个原型 HTML，或把 .html 文件放进工作区，然后点刷新。",
+    "select": "在画布中选择一个元素",
+    "selectHint": "点选元素 · 双击文字直接改 · Delete 删除",
+    "save": "保存",
+    "saved": "已保存",
+    "saving": "保存中…",
+    "unsaved": "有未保存修改",
+    "undo": "撤销",
+    "redo": "重做",
+    "close": "关闭编辑器",
+    "reload": "重新载入",
+    "text": "文字",
+    "color": "颜色",
+    "type": "排版",
+    "actions": "操作",
+    "textColor": "文字颜色",
+    "background": "背景颜色",
+    "border": "边框颜色",
+    "fontSize": "字号",
+    "bold": "加粗",
+    "align": "对齐",
+    "reset": "还原",
+    "duplicate": "复制",
+    "delete": "删除",
+    "editText": "编辑文字",
+    "applyText": "应用"
+  }
+}

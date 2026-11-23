@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "title": "HTML Visual Editor",
+    "description": "Edit text, colors and components of workspace HTML files directly in a full-screen canvas, then save in place."
+  },
+  "launcher": "HTML Edit",
+  "panel": {
+    "title": "HTML Visual Editor",
+    "files": "Workspace HTML",
+    "empty": "No HTML files in this workspace yet.",
+    "emptyHint": "Generate a prototype or drop an .html file into the workspace, then refresh.",
+    "select": "Select an element on the canvas",
+    "selectHint": "Click to select · double-click text to edit · Delete to remove",
+    "save": "Save",
+    "saved": "Saved",
+    "saving": "Saving…",
+    "unsaved": "Unsaved changes",
+    "undo": "Undo",
+    "redo": "Redo",
+    "close": "Close editor",
+    "reload": "Reload file",
+    "text": "Text",
+    "color": "Colors",
+    "type": "Typography",
+    "actions": "Actions",
+    "textColor": "Text color",
+    "background": "Background",
+    "border": "Border",
+    "fontSize": "Font size",
+    "bold": "Bold",
+    "align": "Align",
+    "reset": "Reset",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "editText": "Edit text",
+    "applyText": "Apply"
+  }
+}

@@ -293,6 +293,25 @@ const restored = await evaluate(`(() => {
 })()`)
 check('undo restores element', restored.text.includes('值班台'), JSON.stringify(restored))
 
+/* A page's own form controls keep their keyboard: clicking into an <input> and
+   pressing Backspace must not delete the element that is selected on the canvas. */
+await mouse('mouseMoved', headingPoint.x, headingPoint.y)
+await mouse('mousePressed', headingPoint.x, headingPoint.y)
+await mouse('mouseReleased', headingPoint.x, headingPoint.y)
+await waitFor('window.__log.some((m) => m.type === "dhe:selection" && m.selection)')
+const typing = await evaluate(`(() => {
+  const doc = frames[0].document
+  const input = doc.createElement('input')
+  doc.body.appendChild(input)
+  input.focus()
+  const key = new doc.defaultView.KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true })
+  input.dispatchEvent(key)
+  const survived = Boolean(doc.getElementById('title'))
+  input.remove()
+  return { survived, prevented: key.defaultPrevented }
+})()`)
+check('typing in a page input keeps the selection', typing.survived && typing.prevented === false, JSON.stringify(typing))
+
 await evaluate('window.saveNow()')
 await waitFor('window.__saved !== null', 15000)
 const saved = await evaluate('window.__saved')

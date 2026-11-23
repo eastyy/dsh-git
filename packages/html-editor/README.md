@@ -81,7 +81,7 @@ node --check index.js
 node --check client.js
 node --check assets/editor.js
 node test/verify.mjs   # 包清单、patch、locale、资源：离线
-node test/cdp.mjs      # Host 契约 + iframe 运行时：24 项，需要 Edge
+node test/cdp.mjs      # Host 契约 + iframe 运行时：25 项，需要 Edge
 node test/ui.mjs       # React 客户端：16 项，需要 Edge
 ```
 

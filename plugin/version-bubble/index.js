@@ -431,30 +431,76 @@ export function apply(ctx, config) {
       return !NOISE_FILES.has(baseName(file.path))
     })
     const diffText = await commitDiff(root, sha, meaningful)
-    if (diffText === '') return { summary: '', points: [], files }
+    if (diffText === '') return { summary: '', points: [], files, source: 'fallback' }
     let note
     const answer = await askModel(buildPrompt(root, meaningful, diffText))
     if (answer !== '') note = parseNote(answer)
-    if (note === undefined) note = fallbackNote(meaningful, diffText)
-    return { summary: note.summary, points: note.points, files }
+    if (note !== undefined) return { summary: note.summary, points: note.points, files, source: 'model' }
+    const spare = fallbackNote(meaningful, diffText)
+    return { summary: spare.summary, points: spare.points, files, source: 'fallback' }
   }
 
+  /** One generation per version, shared by the save-time request and the detail request. */
+  const noteJobs = new Map()
+
   async function ensureNote(root, sha) {
+    const running = noteJobs.get(sha)
+    if (running !== undefined) return running
+    const job = produceNote(root, sha)
+    noteJobs.set(sha, job)
+    try {
+      return await job
+    } finally {
+      noteJobs.delete(sha)
+    }
+  }
+
+  function isModelNote(cached) {
+    return (
+      cached !== null &&
+      typeof cached === 'object' &&
+      cached.source === 'model' &&
+      typeof cached.summary === 'string' &&
+      cached.summary !== ''
+    )
+  }
+
+  async function produceNote(root, sha) {
     const map = await readNotes(root)
     const cached = map[sha]
-    if (cached !== undefined && cached !== null && typeof cached.summary === 'string' && cached.summary !== '') {
+    const attempts =
+      cached !== null && typeof cached === 'object' && typeof cached.attempts === 'number' ? cached.attempts : 0
+    const files = Array.isArray(cached && cached.files) ? cached.files : []
+    if (isModelNote(cached)) {
       return {
         summary: cached.summary,
         points: Array.isArray(cached.points) ? cached.points : [],
-        files: Array.isArray(cached.files) && cached.files.length > 0 ? cached.files : await commitFiles(root, sha),
+        files: files.length > 0 ? files : await commitFiles(root, sha),
+        source: 'model',
+        cached: true,
+      }
+    }
+    /* A fallback note is never final: the next look retries the model, up to three times. */
+    if (cached !== null && typeof cached === 'object' && typeof cached.summary === 'string' && cached.summary !== '' && attempts >= 3) {
+      return {
+        summary: cached.summary,
+        points: Array.isArray(cached.points) ? cached.points : [],
+        files: files.length > 0 ? files : await commitFiles(root, sha),
+        source: 'fallback',
         cached: true,
       }
     }
     const built = await buildNote(root, sha)
     if (built.summary !== '') {
-      await saveNote(root, sha, { summary: built.summary, points: built.points, files: built.files })
+      await saveNote(root, sha, {
+        summary: built.summary,
+        points: built.points,
+        files: built.files,
+        source: built.source,
+        attempts: attempts + 1,
+      })
     }
-    return { summary: built.summary, points: built.points, files: built.files, cached: false }
+    return { summary: built.summary, points: built.points, files: built.files, source: built.source, cached: false }
   }
 
   /** Identity is read once per repository per process: two fewer process spawns on every save. */
@@ -579,7 +625,7 @@ export function apply(ctx, config) {
       ensureNote(root, created).catch(() => {})
     }
     forget(dir)
-    return { ok: true, message: '已存档', subject, files: files.length }
+    return { ok: true, message: '已存档', subject, files: files.length, sha: created }
   }
 
   async function restore(dir, sha) {

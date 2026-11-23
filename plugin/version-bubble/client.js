@@ -327,14 +327,16 @@ window.__ModuleLoader__.load({
           if (projectDir === '') {
             setData(null)
             setError('')
-            return
+            return null
           }
           try {
             const next = await request('state')
             setData(next)
             setError('')
+            return next
           } catch (caught) {
             setError(caught instanceof Error ? caught.message : String(caught))
+            return null
           }
         },
         [projectDir, request],
@@ -362,6 +364,7 @@ window.__ModuleLoader__.load({
             if (!alive) return
             setNoteData(result)
             setNoteLoading(false)
+            refresh()
           })
           .catch(function (caught) {
             if (!alive) return
@@ -371,7 +374,7 @@ window.__ModuleLoader__.load({
         return function () {
           alive = false
         }
-      }, [selected, request])
+      }, [selected, request, refresh])
 
       React.useEffect(() => {
         if (!open) return undefined
@@ -437,8 +440,8 @@ window.__ModuleLoader__.load({
           setHop(function (value) {
             return value + 1
           })
-          await refresh()
-          return result
+          const next = await refresh()
+          return { result: result, state: next }
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : String(caught))
           return null
@@ -567,8 +570,14 @@ window.__ModuleLoader__.load({
                   type: 'button',
                   className: 'vwb-btn vwb-btn--primary',
                   disabled: busy || projectDir === '',
-                  onClick: function () {
-                    act('snapshot', { note: '' })
+                  onClick: async function () {
+                    const outcome = await act('snapshot', { note: '' })
+                    if (outcome === null) return
+                    const next = outcome.state
+                    if (next !== null && Array.isArray(next.versions) && next.versions.length > 0) {
+                      setPicking(false)
+                      setSelected(next.versions[0])
+                    }
                   },
                 },
                 busy ? '存档中' : '存档',
@@ -671,6 +680,13 @@ window.__ModuleLoader__.load({
                           }),
                         )
                       : null,
+                  noteData !== null && noteData.source !== undefined && noteData.source !== 'model'
+                    ? h(
+                        'div',
+                        { className: 'vwb-note' },
+                        '模型暂时没响应，这是按 diff 自动拼的简化说明；稍后再打开这个版本会重试。',
+                      )
+                    : null,
                   noteData !== null && Array.isArray(noteData.files) && noteData.files.length > 0
                     ? h(
                         'div',

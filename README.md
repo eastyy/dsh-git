@@ -5,7 +5,7 @@
 | 插件 | 做什么 | 市场分类 |
 |---|---|---|
 | [`packages/html-editor`](packages/html-editor) | 在 dsh 的 Web 界面里可视化编辑工作区的 HTML：点文字改文案、改颜色、删组件、撤销，保存写回原文件 | `ui` |
-| [`packages/version-bubble`](packages/version-bubble) | 浮在窗口上的鲸鱼：一键把当前项目存成 git 版本，自动写一句版本说明，按时间查看版本树并可回到任意一版 | `git` |
+| [`packages/version-bubble`](packages/version-bubble) | 浮在窗口上的鲸鱼：一键把当前项目存成 git 版本，自动写一句版本说明，按时间查看版本树、回到任意一版，也能推到 GitHub / GitLab | `git` |
 
 ## 安装
 

@@ -12,6 +12,7 @@
 | 看版本 | 面板顶部显示 `版本 v<n>` 和未存档文件数；版本按「今天 / 昨天 / 日期」分组，最多取最近 60 个 |
 | 看说明 | 点开某一版看它的 `summary` 和分类要点（需求 / 文案 / 结构 / 样式 / 其他）；第一次打开时才生成，之后缓存 |
 | 回到某一版 | 把工作树恢复成那一版的内容，并记成一个新提交（`回到 <短 sha>`），历史不丢 |
+| 上传到云端 | 把本地版本推到 GitHub / GitLab 的空仓库：面板显示 `github.com/owner/repo @ 分支` 和还没上传的版本数，点一下 `git push -u origin <分支>` |
 | 选项目 | 默认跟随你最近在用的工作区，也可以手动从工作区列表里选 |
 
 首次存档时会自动 `git init`，并补一个最小的 `.gitignore`（`node_modules/`、日志、缓存等）；如果仓库还没有 `user.name` / `user.email`，会补一个本地占位身份。
@@ -32,6 +33,7 @@
 2. 第一次会问你存档哪个项目；之后默认跟随最近的工作区。
 3. 点 **存档** 建第一版；之后每次改完再点一次。
 4. 点某一行看它的说明，需要回退就点 **回到这一版**，确认后执行。
+5. 要同步到云端：点面板底部 **上传到云端** → 在 GitHub / GitLab 建一个空仓库（不勾 README）→ 把仓库地址粘回来 → **保存并上传**。之后底部会显示 `上传 N`（还有几个版本没推）或 `已同步`。
 
 ## 依赖的服务
 
@@ -41,6 +43,7 @@ Host 半侧要求 dsh 提供 `webServer` 与 `subprocess`；模型说明是可�
 
 - **只动 git 仓库。** 目录不是 git 仓库时会先 `git init`；回退是 `git checkout <sha> -- .` 再提交，不改历史、不 force push。
 - **只接受 DSH 已登记的工作区。** 请求里的目录必须命中工作区列表或配置的 `repoPath`，否则回落到默认工作区。
+- **不上传令牌。** 云端只接受 GitHub / GitLab 的 https 或 `git@` 地址，推送交给系统 git（Git Credential Manager 或 SSH key）；插件不保存任何凭据，也不会替你在平台上建仓库。
 - **存档不阻塞。** 版本说明在后台生成，生成失败或超时（20 秒执行上限、45 秒模型上限）都不影响这次提交。
 - **说明可能不准。** 它只读 diff 的前 8 个文件、每段最多 6000 字符，超大提交会被截断；模型写的东西当作提示，不当成事实。
 
@@ -49,12 +52,23 @@ Host 半侧要求 dsh 提供 `webServer` 与 `subprocess`；模型说明是可�
 ```
 package.json          dsh.bundle.patch + dsh.client
 cordis.patch.yml      插入 Host 行
-index.js              Host：git 调用、存档、回退、说明生成与缓存
-client.js             Client：鲸鱼浮窗、版本时间线、说明详情
+index.js              Host：git 调用、存档、回退、说明生成与缓存、云端端点
+remote.js             云端：GitHub/GitLab 地址解析、origin 设置、ahead/behind、push
+client.js             Client：鲸鱼浮窗、版本时间线、说明详情、上传面板
 locale/{zh,en}.json   插件管理里的标题与描述
 icon.svg              插件图标（源文件）
 assets/icon-180.png   市场卡片图标（位图）
+test/remote.mjs       云端逻辑的离线测试（用本地裸仓库当远端）
 ```
+
+## 开发与自检
+
+```powershell
+node --check index.js
+node test/remote.mjs   # 地址解析、origin 设置、ahead/behind、push：13 项，不需要网络
+```
+
+测试用临时目录 + 本地裸仓库模拟远端，跑完自动清理。
 
 ## 已知限制
 
@@ -62,6 +76,8 @@ assets/icon-180.png   市场卡片图标（位图）
 - 回退是「整目录对齐到某一版」，不会只回退单个文件。
 - 说明生成依赖当前默认模型；没有配置模型时永远是 diff 兜底文案。
 - `.gitignore` 只在缺失时创建，已存在则不改，避免覆盖你的规则。
+- 云端只推当前分支（`git push -u origin <分支>`），不处理 PR、LFS、submodule。
+- 没在机器上登录过 git 的平台不会弹输入框（`GIT_TERMINAL_PROMPT=0`），会直接报错并提示先去终端登录一次。
 
 ## 许可证
 

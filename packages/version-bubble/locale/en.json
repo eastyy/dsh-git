@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Version Bubble",
-    "description": "A floating DeepSeek whale that snapshots this project into git with a short readable summary, then shows the version tree by date with one-click restore."
+    "description": "A floating DeepSeek whale that snapshots this project into git with a short readable summary, shows the version tree by date, restores any version, and pushes local versions to GitHub or GitLab."
   }
 }

@@ -83,6 +83,12 @@ window.__ModuleLoader__.load({
       '.vwb-btn:hover{background:var(--dsw-alias-bg-layer-2)}',
       '.vwb-btn--primary{background:var(--dsw-alias-brand-primary);border-color:transparent;color:#fff}',
       '.vwb-btn--primary:hover{filter:brightness(1.06)}',
+      '.vwb-btn--sm{height:24px;padding:0 9px;font-size:11px}',
+      '.vwb-input{width:100%;height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--dsw-alias-border-l2);',
+      'background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font-size:12px;font-family:inherit;box-sizing:border-box}',
+      '.vwb-cloud{padding:4px 14px 14px;display:flex;flex-direction:column;gap:10px}',
+      '.vwb-cloud-row{display:flex;gap:8px}',
+      '.vwb-sync{font-size:11px;color:var(--dsw-alias-label-secondary)}',
       '.vwb-btn[disabled]{opacity:.5;cursor:default}',
       '.vwb-detail{padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}',
       '.vwb-detail-subject{font-size:14px;font-weight:600;line-height:1.45;word-break:break-word}',
@@ -294,6 +300,9 @@ window.__ModuleLoader__.load({
       const [noteData, setNoteData] = React.useState(null)
       const [noteLoading, setNoteLoading] = React.useState(false)
       const [confirmRestore, setConfirmRestore] = React.useState(false)
+      const [remote, setRemote] = React.useState(null)
+      const [cloud, setCloud] = React.useState(false)
+      const [remoteDraft, setRemoteDraft] = React.useState('')
       const rootRef = React.useRef(null)
       const dragRef = React.useRef(null)
       const posRef = React.useRef(pos)
@@ -341,6 +350,31 @@ window.__ModuleLoader__.load({
         },
         [projectDir, request],
       )
+
+      const loadRemote = React.useCallback(
+        async function () {
+          if (projectDir === '') {
+            setRemote(null)
+            return null
+          }
+          try {
+            const result = await request('remote')
+            const next = result.remote || null
+            setRemote(next)
+            return next
+          } catch (caught) {
+            setRemote(null)
+            return null
+          }
+        },
+        [projectDir, request],
+      )
+
+      React.useEffect(() => {
+        if (!open) return undefined
+        loadRemote()
+        return undefined
+      }, [open, loadRemote])
 
       React.useEffect(() => {
         setSelected(null)
@@ -441,6 +475,7 @@ window.__ModuleLoader__.load({
             return value + 1
           })
           const next = await refresh()
+          await loadRemote()
           return { result: result, state: next }
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : String(caught))
@@ -461,10 +496,54 @@ window.__ModuleLoader__.load({
           const result = await request('workspaces')
           setSpaces(Array.isArray(result.items) ? result.items : [])
           setSelected(null)
+          setCloud(false)
           setPicking(true)
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : String(caught))
         }
+      }
+
+      /** The folder name, used to prefill the new-repository form. */
+      function projectName() {
+        const base = data !== null && typeof data.root === 'string' && data.root !== '' ? data.root : projectDir
+        const parts = base.split(/[\\/]/).filter(function (part) {
+          return part !== ''
+        })
+        return parts.length > 0 ? parts[parts.length - 1] : 'dsh-project'
+      }
+
+      /** Repo creation stays in the browser: no token, no API permission to manage. */
+      function openNewRepo(provider) {
+        const url =
+          provider === 'gitlab'
+            ? 'https://gitlab.com/projects/new'
+            : 'https://github.com/new?name=' + encodeURIComponent(projectName()) + '&visibility=private'
+        window.open(url, '_blank', 'noopener,noreferrer')
+      }
+
+      async function upload() {
+        await act('push', {})
+      }
+
+      async function connectAndUpload() {
+        const url = remoteDraft.trim()
+        if (url === '') {
+          setError('先把仓库地址粘进来')
+          return
+        }
+        setBusy(true)
+        setError('')
+        try {
+          await request('remote/set', { url: url })
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : String(caught))
+          setBusy(false)
+          return
+        }
+        setBusy(false)
+        setRemoteDraft('')
+        setCloud(false)
+        await upload()
       }
 
       function onPointerDown(event) {
@@ -554,6 +633,90 @@ window.__ModuleLoader__.load({
         top: openUp ? undefined : 58,
       }
 
+      const ahead = remote !== null && typeof remote.ahead === 'number' ? remote.ahead : 0
+      const hasRemote = remote !== null && typeof remote.url === 'string' && remote.url !== ''
+      const remoteLine = !hasRemote
+        ? ''
+        : (remote.provider !== '' ? remote.provider : '远程') +
+          ' · ' +
+          (remote.owner !== '' ? remote.owner + '/' : '') +
+          remote.repo +
+          (remote.branch !== '' ? ' @ ' + remote.branch : '')
+
+      const remoteBar = hasRemote
+        ? h(
+            'div',
+            { className: 'vwb-sync', style: { padding: '6px 14px', borderBottom: '1px solid var(--dsw-alias-border-l1)' } },
+            h('span', { title: remote.url }, remoteLine + (ahead > 0 ? '，' + ahead + ' 个版本没上传' : '')),
+          )
+        : null
+
+      const cloudView = h(
+        'div',
+        { className: 'vwb-list' },
+        h('div', { className: 'vwb-day' }, '上传到云端'),
+        h(
+          'div',
+          { className: 'vwb-cloud' },
+          h(
+            'div',
+            { className: 'vwb-note' },
+            '先建一个空仓库（不要勾选 README），再把地址粘进来。登录用这台机器已有的 git 凭据（Git Credential Manager 或 SSH key），插件不保存任何令牌。',
+          ),
+          h(
+            'div',
+            { className: 'vwb-cloud-row' },
+            h(
+              'button',
+              { type: 'button', className: 'vwb-btn', onClick: function () { openNewRepo('github') } },
+              '在 GitHub 新建',
+            ),
+            h(
+              'button',
+              { type: 'button', className: 'vwb-btn', onClick: function () { openNewRepo('gitlab') } },
+              '在 GitLab 新建',
+            ),
+          ),
+          h('input', {
+            className: 'vwb-input',
+            placeholder: 'https://github.com/you/repo.git',
+            value: remoteDraft,
+            spellCheck: false,
+            onChange: function (event) {
+              setRemoteDraft(event.target.value)
+            },
+            onKeyDown: function (event) {
+              if (event.key === 'Enter') connectAndUpload()
+            },
+          }),
+          h(
+            'div',
+            { className: 'vwb-cloud-row' },
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'vwb-btn vwb-btn--primary',
+                disabled: busy,
+                onClick: connectAndUpload,
+              },
+              busy ? '上传中…' : '保存并上传',
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'vwb-btn',
+                onClick: function () {
+                  setCloud(false)
+                },
+              },
+              '返回',
+            ),
+          ),
+        ),
+      )
+
       const panel = open
         ? h(
             'div',
@@ -601,7 +764,10 @@ window.__ModuleLoader__.load({
             error !== ''
               ? h('div', { className: 'vwb-err' }, error)
               : null,
-            picking
+            remoteBar,
+            cloud
+              ? cloudView
+              : picking
               ? h(
                   'div',
                   { className: 'vwb-list' },
@@ -862,7 +1028,33 @@ window.__ModuleLoader__.load({
                 },
                 '⇄',
               ),
-              h('span', null, '仅本地'),
+              hasRemote
+                ? h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'vwb-btn vwb-btn--sm',
+                      disabled: busy,
+                      title: remote.url,
+                      onClick: upload,
+                    },
+                    busy ? '上传中' : ahead > 0 ? '上传 ' + ahead : '已同步',
+                  )
+                : h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'vwb-btn vwb-btn--sm',
+                      disabled: busy || projectDir === '',
+                      onClick: function () {
+                        setSelected(null)
+                        setPicking(false)
+                        setError('')
+                        setCloud(true)
+                      },
+                    },
+                    '上传到云端',
+                  ),
             ),
           )
         : null

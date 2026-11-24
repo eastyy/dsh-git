@@ -1,6 +1,6 @@
 {
   "name": "dsh-version-bubble",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "A floating DeepSeek whale that snapshots a project into git and shows its version tree.",
   "exports": {
@@ -13,6 +13,7 @@
   "files": [
     "index.js",
     "client.js",
+    "remote.js",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
@@ -21,7 +22,9 @@
     "LICENSE"
   ],
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "immediately": true,
@@ -47,5 +50,8 @@
   "bugs": {
     "url": "https://github.com/eastyy/dsh-git/issues"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "test:remote": "node test/remote.mjs"
+  }
 }

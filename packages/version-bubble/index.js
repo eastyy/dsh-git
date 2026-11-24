@@ -10,6 +10,7 @@
 import { existsSync, statSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve } from 'node:path'
+import { pushRemote, readRemote, setRemote } from './remote.js'
 
 const PREFIX = '/__dsh-version-bubble'
 const FIELD = '\u001f'
@@ -155,8 +156,9 @@ export function apply(ctx, config) {
   }
 
   /** Run git and collect both streams. Never throws for a non-zero exit. */
-  async function git(args, cwd) {
+  async function git(args, cwd, options = {}) {
     const executable = await gitBinary()
+    const timeoutMs = typeof options.timeoutMs === 'number' ? options.timeoutMs : 20000
     const handle = ctx.subprocess.spawn({
       argv: [executable, ...args],
       cwd,
@@ -176,7 +178,7 @@ export function apply(ctx, config) {
       } catch {
         /* already gone */
       }
-    }, 20000)
+    }, timeoutMs)
     let outcome
     try {
       outcome = await handle.done
@@ -194,6 +196,13 @@ export function apply(ctx, config) {
     const detail = String(result.stderr || '').trim()
     const reason = detail === '' ? fallback : detail.split('\n').slice(0, 4).join('\n')
     return new Error(result.timedOut ? 'git 执行超时' : reason)
+  }
+
+  /** Bind a repository to the runner shape the remote helpers take. */
+  function runGit(root) {
+    return function (args, options) {
+      return git(args, root, options)
+    }
   }
 
   function parseLog(text) {
@@ -745,6 +754,32 @@ export function apply(ctx, config) {
       if (action === 'restore' && req.method === 'POST') {
         const body = await readBody(req)
         sendJson(res, 200, await restore(dir, String(body.sha || '')))
+        return
+      }
+      if (action === 'remote') {
+        const root = await resolveRoot(dir)
+        if (root === undefined) throw new Error('这个目录还不是版本库')
+        sendJson(res, 200, { ok: true, remote: await readRemote(runGit(root), root) })
+        return
+      }
+      if (action === 'remote/set' && req.method === 'POST') {
+        const body = await readBody(req)
+        const root = await resolveRoot(dir)
+        if (root === undefined) throw new Error('这个目录还不是版本库')
+        forget(dir)
+        sendJson(res, 200, { ok: true, remote: await setRemote(runGit(root), root, String(body.url || '')) })
+        return
+      }
+      if (action === 'push' && req.method === 'POST') {
+        const root = await resolveRoot(dir)
+        if (root === undefined) throw new Error('这个目录还不是版本库')
+        forget(dir)
+        const pushed = await pushRemote(runGit(root), root)
+        sendJson(res, 200, {
+          ok: true,
+          message: '已上传到 ' + (pushed.provider === '' ? '远程仓库' : pushed.provider) + '：' + pushed.branch,
+          ...pushed,
+        })
         return
       }
       sendJson(res, 404, { ok: false, error: '未知操作' })
